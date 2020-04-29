@@ -1,0 +1,206 @@
+<!doctype html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+
+  <title>Memory Game</title>
+  <meta name="author" content="Prof. Matteo Palitto">
+
+  <!--link rel="stylesheet" href="styles.css"-->
+  <style>
+
+.tavolo {
+  display: grid;
+  grid-template-columns: 100px 100px 100px 100px 100px;
+  grid-gap: 10px;
+  background-color: #fff;
+}
+  </style>
+
+</head>
+
+<body>
+  <h3>Score:<span id="result"></span></h3>
+
+  <div class="tavolo">
+  </div>
+
+  <script>
+// avvio il programma solo dopo che il Browser ha terminato di elaborare le istruzioni HTML
+// DOM = Document Object Model e' la rappresentazione interna del documento descritto con il linguaggio HTML
+// Il programma Javascript viene eseguito su questa rappresentazione interna
+// e' quindi importante che questo processo di traduzione del file testo HTML sia completato prima che il
+// codice Javascript venga eseguito
+document.addEventListener('DOMContentLoaded', () => {
+
+  // carte
+  // la sequenza di carte che verranno posizionate sul tavolo da gioco 
+  const carteArray = [
+    { // posizioneN 0 sul tavolo da gioco
+	name: 'whale',
+        img:  'images/whale.png'
+    },
+    { // posizioneN 1 sul tavolo da gioco
+	name: 'seeHorse',
+        img:  'images/seeHorse.png'
+    },
+    {
+	name: 'seeStar',
+        img:  'images/seeStar.png'
+    },
+    {
+	name: 'seeShell',
+        img:  'images/seeShell.png'
+    },
+    {
+	name: 'stingRay',
+        img:  'images/stingRay.png'
+    },
+    {
+	name: 'shark',
+        img:  'images/shark.png'
+    },
+    {
+	name: 'ballFish',
+        img:  'images/ballFish.png'
+    },
+    {
+	name: 'delphin',
+        img:  'images/delphin.png'
+    },
+    {
+	name: 'turtle',
+        img:  'images/turtle.png'
+    },
+    {
+	name: 'crab',
+        img:  'images/crab.png'
+    },
+    { // ripeto la sequenza perche' devo avere 2 carte dello stesso tipo per ogni figura
+	name: 'whale',
+        img:  'images/whale.png'
+    },
+    {
+	name: 'seeHorse',
+        img:  'images/seeHorse.png'
+    },
+    {
+	name: 'seeStar',
+        img:  'images/seeStar.png'
+    },
+    {
+	name: 'seeShell',
+        img:  'images/seeShell.png'
+    },
+    {
+	name: 'stingRay',
+        img:  'images/stingRay.png'
+    },
+    {
+	name: 'shark',
+        img:  'images/shark.png'
+    },
+    {
+	name: 'ballFish',
+        img:  'images/ballFish.png'
+    },
+    {
+	name: 'delphin',
+        img:  'images/delphin.png'
+    },
+    {
+	name: 'turtle',
+        img:  'images/turtle.png'
+    },
+    {
+	name: 'crab',
+        img:  'images/crab.png'
+    }
+  ]
+
+
+// tavolo di gioco
+const tavolo = document.querySelector('.tavolo');
+// posiziona le carte sul tavolo di gioco
+function memory() {
+  // distribuiamo le carte sul tavolo di gioco
+  for(let posizioneN = 0; posizioneN < carteArray.length; posizioneN++) {
+    // creo un posto sul tavolo per una carta
+    var carta = document.createElement('img');
+    // inizialmente la carta e' girata e quindi non mostra la figura
+    carta.setAttribute('src', 'images/blank.png');
+    // visto che le immagini delle carte non sono perfettamente ritagliate
+    // le ridimendiono per renderle tutte perfettamente uguali
+    carta.setAttribute('width', 100);
+    carta.setAttribute('height', 100);
+    // ogni posto sul tavolo viene identificato con un numero
+    // il numero viene aggiunto all'elemento IMG sotto forma di attributo
+    carta.setAttribute('carta-numero', posizioneN);
+    // aggiungo alla carta la possibilita' di poter essere scoperta/girata
+    // cliccando sulla carta eseguiro' una funzione che la scopre
+    carta.addEventListener('click', scopriCarta);
+    // finalmente posiziono la carta sul tavolo
+    tavolo.appendChild(carta);
+  }
+}
+
+// scopri la carta
+var carteScelte  = []; // il nome delle carte scelte
+var carteScelteN = []; // il numero che identifica la posizione (posizioneN) della carta sul tavolo di gioco
+
+// richiamata quando una carta viene cliccata, mostra la figura che mostrerebbe la carta una volta girata
+function scopriCarta() {
+  // la parola chiave "this"/questa si riferisce alla carta (elemento HTML) che ha richiamato la funzione
+  // leggendo l'attributo possiamo sapere la posizioneN della carta scelta(cliccata) sul tavolo di gioco
+  var cartaN = this.getAttribute('carta-numero');
+  // I fini di seguire il funzionamento del programma e verificarne la correttezza
+  // uso la console per scrivere delle informazioni che aiutano durante lo sviluppo
+  console.log('scopri carta: '+ cartaN);
+  // memorizzo in un Array "carteScelte" il nome della carta scelta
+  // notate che alla posizione della carta sul tavolo corrisponde la carta nell'Array di carteArray
+  carteScelte.push(carteArray[cartaN].name);
+  // memorizzo in un Array "carteScelteN" la posizioneN della carta scelta sul tavolo di gioco
+  carteScelteN.push(cartaN);
+  // cambiamo l'immagine associata all'elemento prescelto
+  // con l'immagine che avevamo memorizzato nell'ARRAY "carteArray"
+  // questa operazione inizia una sequeza di operazioni da parte del Browser per sostituire
+  // l'immagine dell'elemento IMG, questa operazione puo' richiedere un po' di tempo
+  this.setAttribute('src', carteArray[cartaN].img);
+  // se il numero di carte scelte e' 2, richiamo la funzione "controllaCarte", ma lo faccio
+  // dopo un certo intervallo di tempo (100ms) per dare tempo al Browser di completare
+  // la sostituzione dell'immagine dell'ultima carta scoperta.
+  // Questo e' necessario perche' Javascript e' un linguaggio asyncrono, e mentre il browser avvia la sequenza
+  // per la sostituzione dell'immagine, il resto del codice viene eseguito in contemporanea
+  if(carteScelte.length === 2) setTimeout(controllaCarte, 100);
+}
+
+function controllaCarte() {
+  carte = document.querySelectorAll('img');
+  if(carteScelte[0] === carteScelte[1]) { // le carte scelte coincidono
+	// devo rimuovere le carte dal tavolo di gioco
+	alert('Bravo +1');
+	// sostituisco l'immagine della carta con una vuota (stesso colore dello sfondo)
+	carte[carteScelteN[0]].setAttribute('src', 'images/vuota.png');
+	// rimuovo la chiamata alla funzione "scopriCarta" per la carta
+	carte[carteScelteN[0]].removeEventListener('click', scopriCarta);
+	// ripeto per la seconda carta
+	carte[carteScelteN[1]].setAttribute('src', 'images/vuota.png');
+	carte[carteScelteN[1]].removeEventListener('click', scopriCarta);
+  } else { // le carte scelte non coincidono
+	alert("Booo! Prova di nuovo sarai piu' fortunato");
+	// sostituisco l'immagine della carta con l'immagine della carte girata
+	carte[carteScelteN[0]].setAttribute('src', 'images/blank.png');
+	carte[carteScelteN[1]].setAttribute('src', 'images/blank.png');
+  }
+  // in entrambi i casi svuoto l'array delle carte scelte per il nuovo turno di gioco
+  carteScelte  = [];
+  carteScelteN = [];
+
+}
+
+memory();
+});
+  </script>
+</body>
+</html>
