@@ -196,6 +196,7 @@ function scopriCarta() {
   // leggendo l'attributo possiamo sapere la posizioneN della carta scelta(cliccata) sul tavolo di gioco
   var cartaN = this.getAttribute('carta-numero');
   let posizioneN = scrabledOrder.indexOf(cartaN); //la posizione della carta sul tavolo
+	console.log("posizioneN: "+posizioneN+" cartaScelta: "+carteScelteN[0]);
   if(carteScelte.length == 1 && posizioneN == carteScelteN[0]) return; //user double cliccked the same card
   // I fini di seguire il funzionamento del programma e verificarne la correttezza
   // uso la console per scrivere delle informazioni che aiutano durante lo sviluppo
