@@ -206,23 +206,29 @@ function controllaCarte() {
 	//alert('Bravo +1');
 	  nCarteOnTable--;nCarteOnTable--; //due carte in meno sul tavolo da gioco
 	  if(nCarteOnTable == 0) {
-		  animatedText("You WIN!!!");
-		  animatedText("You WIN!!!");
-		  animatedText("You WIN!!!");
-	  } else  animatedText("Yess!");
-	// sostituisco l'immagine della carta con una vuota (stesso colore dello sfondo)
-	carte[carteScelteN[0]].setAttribute('src', 'images/vuota.png');
-	// rimuovo la chiamata alla funzione "scopriCarta" per la carta
-	carte[carteScelteN[0]].removeEventListener('click', scopriCarta);
-	// ripeto per la seconda carta
-	carte[carteScelteN[1]].setAttribute('src', 'images/vuota.png');
-	carte[carteScelteN[1]].removeEventListener('click', scopriCarta);
+		  animatedText("You WIN!!!", () => {
+		  	animatedText("You WIN!!!", () => {
+		  		animatedText("You WIN!!!", () => { testo.style.display = "block" });
+			});
+		  });
+	  } else  animatedText("Yess!", () => {
+		// sostituisco l'immagine della carta con una vuota (stesso colore dello sfondo)
+		carte[carteScelteN[0]].setAttribute('src', 'images/vuota.png');
+		// rimuovo la chiamata alla funzione "scopriCarta" per la carta
+		carte[carteScelteN[0]].removeEventListener('click', scopriCarta);
+		// ripeto per la seconda carta
+		carte[carteScelteN[1]].setAttribute('src', 'images/vuota.png');
+		carte[carteScelteN[1]].removeEventListener('click', scopriCarta);
+	  });
+
   } else { // le carte scelte non coincidono
 	//alert("Booo! Prova di nuovo sarai piu' fortunato");
-	  animatedText("Nooooo");
-	// sostituisco l'immagine della carta con l'immagine della carte girata
-	carte[carteScelteN[0]].setAttribute('src', 'images/blank.png');
-	carte[carteScelteN[1]].setAttribute('src', 'images/blank.png');
+	  animatedText("Nooooo", () => {
+		// sostituisco l'immagine della carta con l'immagine della carte girata
+		carte[carteScelteN[0]].setAttribute('src', 'images/blank.png');
+		carte[carteScelteN[1]].setAttribute('src', 'images/blank.png');
+	  });
+
   }
   // in entrambi i casi svuoto l'array delle carte scelte per il nuovo turno di gioco
   carteScelte  = [];
@@ -231,23 +237,24 @@ function controllaCarte() {
 }
 
 var testo = document.querySelector('.centered');
-function animatedText(msg) {
+
+function animatedText(msg, callback) {
 	
 	testo.innerHTML = msg;
 	testo.style.fontSize = "xx-small";
 	testo.style.display = "block";
 	
-	increaseText(10)
+	increaseText(10, callback);
  
 }
 
-function increaseText(n) {
+function increaseText(n, callback) {
   
-  if(n == 410) {testo.style.display = "none"; return;}
+  if(n == 410) {callback(); testo.style.display = "none"; return;}
 	
   setTimeout(() => {
 	testo.style.fontSize = `${n}px`;
-	increaseText(n + 4);
+	increaseText(n + 4, callback);
   }, 10);
 	     
 }
