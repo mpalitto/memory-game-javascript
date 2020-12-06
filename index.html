@@ -16,6 +16,20 @@
   grid-gap: 10px;
   background-color: #fff;
 }
+	  
+/* Container che contiene il tavoloe il testo da animare */
+.container {
+  position: relative;
+  text-align: center;
+  color: white;
+}
+/* Centered text */
+.centered {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
   </style>
 
 </head>
@@ -23,9 +37,12 @@
 <body>
   <h3>Score:<span id="result"></span></h3>
 
-  <div class="tavolo">
-  </div>
+<div class="container">
 
+  <div class="tavolo"></div>
+  <div class="centered">You WIN!!!</div>
+	
+</div>
   <script>
 // avvio il programma solo dopo che il Browser ha terminato di elaborare le istruzioni HTML
 // DOM = Document Object Model e' la rappresentazione interna del documento descritto con il linguaggio HTML
