@@ -40,7 +40,7 @@
 <div class="container">
 
   <div class="tavolo"></div>
-  <div class="centered">You WIN!!!</div>
+  <div class="centered">PLAY</div>
 	
 </div>
   <script>
@@ -141,6 +141,9 @@ const container = document.querySelector('.container');
 
 // tavolo di gioco
 const tavolo = document.querySelector('.tavolo');
+	
+var nCarteOnTable = 20; //ci sono 20 carte sul tavolo inizialmente
+	
 // posiziona le carte sul tavolo di gioco
 function memory() {
   // distribuiamo le carte sul tavolo di gioco
@@ -162,11 +165,6 @@ function memory() {
     // finalmente posiziono la carta sul tavolo
     tavolo.appendChild(carta);
   }
-  //var text = document.createElement('div');
-  //text.setAttribute('class', 'centered');
-  //text.innerHTML = "You WIN!!!";
-  //container.appendChild(text);
-  //container.innerHTML += '<div class="centered">You WIN!!!</div>';
 	
 }
 
@@ -206,7 +204,12 @@ function controllaCarte() {
   if(carteScelte[0] === carteScelte[1]) { // le carte scelte coincidono
 	// devo rimuovere le carte dal tavolo di gioco
 	//alert('Bravo +1');
-	  animatedText("Yess!");
+	  nCarteOnTable--;nCarteOnTable--; //due carte in meno sul tavolo da gioco
+	  if(nCarteOnTable == 0) {
+		  animatedText("You WIN!!!");
+		  animatedText("You WIN!!!");
+		  animatedText("You WIN!!!");
+	  } else  animatedText("Yess!");
 	// sostituisco l'immagine della carta con una vuota (stesso colore dello sfondo)
 	carte[carteScelteN[0]].setAttribute('src', 'images/vuota.png');
 	// rimuovo la chiamata alla funzione "scopriCarta" per la carta
