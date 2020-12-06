@@ -203,7 +203,8 @@ function controllaCarte() {
   carte = document.querySelectorAll('img');
   if(carteScelte[0] === carteScelte[1]) { // le carte scelte coincidono
 	// devo rimuovere le carte dal tavolo di gioco
-	alert('Bravo +1');
+	//alert('Bravo +1');
+	  animatedText("Yess!");
 	// sostituisco l'immagine della carta con una vuota (stesso colore dello sfondo)
 	carte[carteScelteN[0]].setAttribute('src', 'images/vuota.png');
 	// rimuovo la chiamata alla funzione "scopriCarta" per la carta
@@ -212,7 +213,8 @@ function controllaCarte() {
 	carte[carteScelteN[1]].setAttribute('src', 'images/vuota.png');
 	carte[carteScelteN[1]].removeEventListener('click', scopriCarta);
   } else { // le carte scelte non coincidono
-	alert("Booo! Prova di nuovo sarai piu' fortunato");
+	//alert("Booo! Prova di nuovo sarai piu' fortunato");
+	  animatedText("Nooooo");
 	// sostituisco l'immagine della carta con l'immagine della carte girata
 	carte[carteScelteN[0]].setAttribute('src', 'images/blank.png');
 	carte[carteScelteN[1]].setAttribute('src', 'images/blank.png');
@@ -221,6 +223,24 @@ function controllaCarte() {
   carteScelte  = [];
   carteScelteN = [];
 
+}
+
+var testo = querySelector('.centered');
+function animatedText(msg) {
+	
+	testo.innerHTML = msg;
+	testo.style.fontSize = "xx-small";
+	testo.style.display = "block";
+	
+	for(let n=0; n<7; n++) {
+	     setTimeout(() => {
+		  testo.style.fontSize = larger;
+	     }, 100);
+	}
+	
+	testo.style.display = "none";
+
+  
 }
 
 memory();
