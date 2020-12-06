@@ -177,6 +177,7 @@ function memory() {
     // ogni posto sul tavolo viene identificato con un numero
     // il numero viene aggiunto all'elemento IMG sotto forma di attributo
     carta.setAttribute('carta-numero', scrabledOrder[posizioneN]);
+    carta.setAttribute('carta-posizione', posizioneN);
     // aggiungo alla carta la possibilita' di poter essere scoperta/girata
     // cliccando sulla carta eseguiro' una funzione che la scopre
     carta.addEventListener('click', scopriCarta);
@@ -195,7 +196,7 @@ function scopriCarta() {
   // la parola chiave "this"/questa si riferisce alla carta (elemento HTML) che ha richiamato la funzione
   // leggendo l'attributo possiamo sapere la posizioneN della carta scelta(cliccata) sul tavolo di gioco
   var cartaN = this.getAttribute('carta-numero');
-  let posizioneN = scrabledOrder.indexOf(cartaN); //la posizione della carta sul tavolo
+  let posizioneN = this.getAttribute('carta-posizione'); //la posizione della carta sul tavolo
 	console.log("posizioneN: "+posizioneN+" cartaScelta: "+carteScelteN[0]);
   if(carteScelte.length == 1 && posizioneN == carteScelteN[0]) return; //user double cliccked the same card
   // I fini di seguire il funzionamento del programma e verificarne la correttezza
