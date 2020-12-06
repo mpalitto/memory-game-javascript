@@ -143,10 +143,28 @@ const container = document.querySelector('.container');
 const tavolo = document.querySelector('.tavolo');
 	
 var nCarteOnTable = 20; //ci sono 20 carte sul tavolo inizialmente
+
+
+/**
+ * Returns a random number between min (inclusive) and max (exclusive)
+ */
+function getRandom(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
+var originalOrder = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19];
+var scrabledOrder = [];
 	
-// posiziona le carte sul tavolo di gioco
+for(let nCarte = 20; nCarte > 0; nCarte--) {
+	var cartaX = getRandom(0, nCarte);
+	scrabledOrder.push(originalOrder.splice(cartaX, 1)[0]);
+}
+
+console.log(scrabledOrder);
+	
+// posiziona le carte sul tavolo da gioco
 function memory() {
-  // distribuiamo le carte sul tavolo di gioco
+  // distribuiamo le carte sul tavolo da gioco
   for(let posizioneN = 0; posizioneN < carteArray.length; posizioneN++) {
     // creo un posto sul tavolo per una carta
     var carta = document.createElement('img');
@@ -158,7 +176,7 @@ function memory() {
     carta.setAttribute('height', 100);
     // ogni posto sul tavolo viene identificato con un numero
     // il numero viene aggiunto all'elemento IMG sotto forma di attributo
-    carta.setAttribute('carta-numero', posizioneN);
+    carta.setAttribute('carta-numero', scrabledOrder[posizioneN]);
     // aggiungo alla carta la possibilita' di poter essere scoperta/girata
     // cliccando sulla carta eseguiro' una funzione che la scopre
     carta.addEventListener('click', scopriCarta);
