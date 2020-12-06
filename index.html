@@ -254,7 +254,7 @@ function animatedText(msg, callback) {
 
 function increaseText(n, callback) {
   
-  if(n == 410) {callback(); testo.style.display = "none"; return;}
+  if(n == 410) {testo.style.display = "none"; callback(); return;}
 	
   setTimeout(() => {
 	testo.style.fontSize = `${n}px`;
