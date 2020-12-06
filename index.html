@@ -195,7 +195,8 @@ function scopriCarta() {
   // la parola chiave "this"/questa si riferisce alla carta (elemento HTML) che ha richiamato la funzione
   // leggendo l'attributo possiamo sapere la posizioneN della carta scelta(cliccata) sul tavolo di gioco
   var cartaN = this.getAttribute('carta-numero');
-  if(carteScelte.length == 1 && cartaN == carteScelteN[0]) return; //user double cliccked the same card
+  let posizioneN = scrabledOrder.indexOf(cartaN); //la posizione della carta sul tavolo
+  if(carteScelte.length == 1 && posizioneN == carteScelteN[0]) return; //user double cliccked the same card
   // I fini di seguire il funzionamento del programma e verificarne la correttezza
   // uso la console per scrivere delle informazioni che aiutano durante lo sviluppo
   console.log('scopri carta: '+ cartaN);
@@ -203,7 +204,7 @@ function scopriCarta() {
   // notate che alla posizione della carta sul tavolo corrisponde la carta nell'Array di carteArray
   carteScelte.push(carteArray[cartaN].name);
   // memorizzo in un Array "carteScelteN" la posizioneN della carta scelta sul tavolo di gioco
-  carteScelteN.push(cartaN);
+  carteScelteN.push(posizioneN);
   // cambiamo l'immagine associata all'elemento prescelto
   // con l'immagine che avevamo memorizzato nell'ARRAY "carteArray"
   // questa operazione inizia una sequeza di operazioni da parte del Browser per sostituire
