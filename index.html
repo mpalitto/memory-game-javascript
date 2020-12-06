@@ -232,15 +232,21 @@ function animatedText(msg) {
 	testo.style.fontSize = "xx-small";
 	testo.style.display = "block";
 	
-	for(let n=0; n<7; n++) {
-	     setTimeout(() => {
-		  testo.style.fontSize = larger;
-	     }, 100);
-	}
+	increaseText(0)
 	
-	testo.style.display = "none";
+	
 
   
+}
+
+function increaseText(n) {
+  
+  if(n == 7) {testo.style.display = "none"; return;}
+	
+  setTimeout(() => {
+	increaseText(n);
+  }, 100);
+	     
 }
 
 memory();
