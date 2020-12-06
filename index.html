@@ -219,6 +219,9 @@ function controllaCarte() {
 		// ripeto per la seconda carta
 		carte[carteScelteN[1]].setAttribute('src', 'images/vuota.png');
 		carte[carteScelteN[1]].removeEventListener('click', scopriCarta);
+		// in entrambi i casi svuoto l'array delle carte scelte per il nuovo turno di gioco
+ 		carteScelte  = [];
+  		carteScelteN = [];
 	  });
 
   } else { // le carte scelte non coincidono
@@ -227,12 +230,13 @@ function controllaCarte() {
 		// sostituisco l'immagine della carta con l'immagine della carte girata
 		carte[carteScelteN[0]].setAttribute('src', 'images/blank.png');
 		carte[carteScelteN[1]].setAttribute('src', 'images/blank.png');
+		// in entrambi i casi svuoto l'array delle carte scelte per il nuovo turno di gioco
+ 		carteScelte  = [];
+  		carteScelteN = [];
+
 	  });
 
   }
-  // in entrambi i casi svuoto l'array delle carte scelte per il nuovo turno di gioco
-  carteScelte  = [];
-  carteScelteN = [];
 
 }
 
