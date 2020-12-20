@@ -1,5 +1,3 @@
-<!doctype html>
-
 <html>
 <head>
   <meta charset="utf-8">
@@ -8,7 +6,39 @@
   <meta name="author" content="Prof. Matteo Palitto">
 
   <!--link rel="stylesheet" href="styles.css"-->
+  <script src="https://www.gstatic.com/firebasejs/8.1.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.1.2/firebase-firestore.js"></script>
+
+  <!-- TODO: Add SDKs for Firebase products that you want to use
+     https://firebase.google.com/docs/web/setup#available-libraries -->
+  <script src="https://www.gstatic.com/firebasejs/8.1.2/firebase-analytics.js"></script>
+
   <style>
+
+#outerGrid {
+  display: grid;
+  grid-template-rows: 50px 1fr;
+  grid-gap: 8px;
+}
+
+#outerGrid > div {
+  background-color: limegreen;
+  color: white;
+  font-size: 3vw;
+  padding: 8px;
+}
+
+#innerGrid {
+  display: grid;
+  grid-template-columns: 520px 1fr;
+  grid-gap: 5px;
+}
+
+#innerGrid > div {
+  background: lightgreen;
+  padding: 8px;
+  color: black;
+}
 
 .tavolo {
   display: grid;
@@ -16,24 +46,407 @@
   grid-gap: 10px;
   background-color: #fff;
 }
+	  
+/* Container che contiene il tavoloe il testo da animare */
+.container {
+  position: relative;
+  text-align: center;
+  color: black;
+}
+/* Centered text */
+.centered {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+#torneo {
+  color: white;
+  font-size: 2vw;
+}
+.lista {
+  background: orange;
+  padding: 2px;
+  margin: 4px;
+  color: white;
+}
+.waiting {
+  background: green;
+  padding: 2px;
+  margin: 4px;
+  color: white;
+}
+.running {
+  background: blue;
+  padding: 2px;
+  margin: 4px;
+  color: white;
+}
   </style>
 
 </head>
 
 <body>
-  <h3>Score:<span id="result"></span></h3>
 
-  <div class="tavolo">
+<div id="outerGrid">
+  <div id="head" style="text-align: center">
+	<span id="myName" style="dispay:none"></span>
+	<button id="logout" onclick="logout()" style="display:none"/>Logout</button>
+	Memory Game Tournament
+	<input type="text" class="nomeGioco" style="display:inline-block; width: 20%;"/>
+	<button class="nomeGioco" onclick="crea()" style="display:inline-block"/>+ Crea</button>
   </div>
-
+  <div id="innerGrid">
+    <div id="gioco">
+        <div id="tavolo"></div>
+        <div id="animatedMessage" class="centered">PLAY</div>
+    </div> 
+    <div id="torneo">
+        <div id="gameList">Lista dei giochi
+            <div id="waiting" class="lista">in attesa di giocatori:</div>
+            <div id="running" class="lista">in corso:</div>
+            <div id="hallOfFame" class="lista">HALL of FAME:</div>
+        </div>
+    </div> 
+  </div>
+</div>
   <script>
+//------------------- MEMORY TOURNAMENT -------------------------------------------------------
+// OBIETTIVI
+//1. possibilità di avviare una nuova partita
+//1.1 chi crea nuova partita diventa automanticamente il primo giocatore e viene richiesto di inserire un Nick
+//1.2 il gioco si mette in attesa che un secondo giocatore si registri
+//1.3 un giocatore impegnato in un altra partita non può creare altre partite
+//1.4 il Nick di un utente impegnato in una partita viene mostrato con accanto la possibilità di abbandonare(logout)
+//2. Lista dei giochi in attesa di secondo giocatore
+//2.1 Se un utente NON è già impegnato in un gioco può inserirsi in uno dei giochi in attesa
+//2.2 Se un utente è già impegnato in un gioco non può inserirsi in uno dei giochi in attesa
+//2.3 Se un gioco acquisisce entrambi i giocatori viene spostato nella lista dei giochi "in gioco"
+//2.4 Se utente è impeganto in un gioco, il suo gioco viene posto in cima alla lista
+//2.4 Se unico giocatore di un gioco in attesa esegue il logout/abbandono il gioco viene rimosso
+//3. Lista delle partite "in gioco"
+//3.1 Se utente è impeganto in un gioco, il suo gioco viene posto in cima alla lista
+//3.2 Se unico giocatore esegue il logout/abbandono il gioco viene spostato nella lista dei giochi in attesa e il punteggio degli eventuali giocatori vengono azzerati
+//3.3 Le informazioni da mostrare nella lista per ogni gioco sono: nome gioco, nick giocatori con relativo punteggio
+
+// PROGETTAZIONE
+// il giocatore1 MISCHIA le carte 
+// le carte della partita viene rappresentato da un array di oggetti che descrivono l'ordine e lo stato della carta
+// ogni carta puo' essere "back"(girata), "front"(scoperta) o "void"(rimossa).
+// ogni volta che l'array viene aggiornato durante il corso della partita, viene fatto un confronto
+// tra l'array del DB e l'array locale, se differiscono vengono sincronizzati aggiornando le carte sul tavolo
+// e quindi l'array locale.
+  
 // avvio il programma solo dopo che il Browser ha terminato di elaborare le istruzioni HTML
 // DOM = Document Object Model e' la rappresentazione interna del documento descritto con il linguaggio HTML
 // Il programma Javascript viene eseguito su questa rappresentazione interna
 // e' quindi importante che questo processo di traduzione del file testo HTML sia completato prima che il
 // codice Javascript venga eseguito
-document.addEventListener('DOMContentLoaded', () => {
+//----------------------------------- TOURNAMENT CODE ------------------------------------------------
+//--------------------------------------- CREA new TOURNAMENT ----------------------------------------
+  var logoutD = document.querySelector('#logout');  //elemento in cui visualizzare il bottone di loguot
+  var myNameD = document.querySelector('#myName');  //elemento in cui stampare il mio nome
 
+  var nomeGioco = document.querySelectorAll('.nomeGioco');
+  var waiting = document.querySelector('#waiting');
+  var running = document.querySelector('#running');
+  var hallOfFame = document.querySelector('#hallOfFame');
+  var gl = {};  //list giochi = game list (gl)
+  var hall = {};  //list giocatori vincenti
+  var myGame = localStorage.myGame;
+  var myRole = localStorage.myRole;
+  var myName = localStorage.myName;
+  
+  window.onbeforeunload = function(){
+	localStorage.myGame = myGame;
+	localStorage.myRole = myRole;
+	localStorage.myName = myName;
+  }  
+  
+  function logout() {
+	myName = "";
+	//localStorage.myName = "";
+	myNameD.innerHTML = "";
+	logoutD.style = "display:none";
+	nomeGioco[0].style = "display: inline-block";
+	nomeGioco[1].style = "display: inline-block";
+	
+	try {
+	if(gl[myGame].stato == "running") {
+		gl[myGame].stato = "waiting";
+		gl[myGame].scorePl1 = 0;
+		gl[myGame].scorePl2 = 0;
+		if(myRole == "player1")
+			gl[myGame].pl1 = gl[myGame].pl2;
+		gl[myGame].pl2 = "";
+		
+		aggiornaGL();
+	} else //entrambi i giocatori hanno abbandonato
+		glRef.update({ //rimuovi il gioco 
+			[myGame]: firebase.firestore.FieldValue.delete()
+		});
+	} catch {}
+	myGame = "";
+	myRole = "";
+	location.reload();
+  }
+  
+  function login() {
+	//console.log("myName: "+myName);
+	myNameD.innerHTML = myName;
+	myNameD.style = "display:inline-block";
+	logoutD.style = "display:inline-block";
+	nomeGioco[0].style = "display: none";
+	nomeGioco[1].style = "display: none";
+  }
+ 
+  if(myName !== "") login(); 
+ 
+  function crea() {
+	
+	myGame = nomeGioco[0].value;
+	nomeGioco[0].value = "";
+	// verifica il nome della partita non sia omesso
+	if(myGame == "") return alert("Inserisci nome della partita");
+	
+	// verifica il nome della partita non sia un doppione
+	if(gl[myGame]) return alert("Gioco già esistente...");
+	
+	var player1 = prompt("Inserisci un Nick name");
+
+	// verifica il nome della giocatore non sia omesso
+	if(player1 == "") return alert("Inserisci il tuo Nick");
+	
+	myRole = "player1";
+	myName = player1;
+	
+	gl[myGame] = {};
+	gl[myGame].stato = "waiting"; //in attesa di player2 
+	gl[myGame].pl1 = player1;
+	gl[myGame].scorePl1 = 0;
+	gl[myGame].tavolo = mischiaCarte();
+	gl[myGame].turno = "waiting"; //in attesa di player2 
+	gl[myGame].nCarteOnTable = nCarteOnTable;
+
+  	aggiornaGL();
+	
+	login();
+  }
+  
+//  function rimuovi(gameXbutton) {
+//	gameXbutton.parentNode.parentNode.removeChild(gameXbutton.parentNode);
+//	myGame = "";
+//	myRole = "";
+//	logout();
+//  }
+  
+   function join(elem) {
+     //console.log(elem.parentNode);
+    let game = elem.parentNode.getAttribute("id");
+	var player2 = prompt("Inserisci un Nick name");
+
+   	// verifica il nome della giocatore non sia omesso
+	if(player2 == "") return alert("Inserisci il tuo Nick");
+	if(player2 == gl[game].pl1) return alert("i giocatori dovrebbero avere Nick diversi");
+	
+	myGame = game;
+	myRole = "player2";
+	myName = player2;
+	
+	gl[game].stato = "running"; //in corso 
+	gl[game].pl2 = player2;
+	gl[game].scorePl2 = 0;
+	gl[game].turno = "player1"; //inizia player1 
+
+	//tavoloArray = gl[game].tavolo;
+
+	aggiornaGL();
+	login();
+  }
+
+//----------------------------------------------------------
+//-------------  Fire Store by Google ----------------------
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  var firebaseConfig = {
+    apiKey: "AIzaSyAKV_KaysNCrbw2zNMpYon4vWYcQViov70",
+    authDomain: "memoryhighscore.firebaseapp.com",
+    projectId: "memoryhighscore",
+    storageBucket: "memoryhighscore.appspot.com",
+    messagingSenderId: "476001605598",
+    appId: "1:476001605598:web:d12a9b690f1cb3fdf7af4f",
+    measurementId: "G-3B0ERRJ803"
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  firebase.analytics();
+
+  //console.log("firebase initialized");
+
+//--------------------------------------------------------------------------
+
+  var firestore = firebase.firestore();
+  //console.log("firestore reference created");
+
+  const hallRef = firestore.doc("memoryGame/hallOfFame"); //memory is a collection and chat is the document
+  const glRef = firestore.doc("memoryGame/gl"); //memory is a collection and userList is the document
+
+  getRealTimeUpdates = function() {
+    //console.log("listening for DOC changes");
+
+    hallRef.onSnapshot(function(doc) {
+      //console.log("new Hall of Fame!");
+      if(doc && doc.exists) {
+        hall = doc.data();
+        //console.log("new msg: "+JSON.stringify(myData));
+		if(Object.entries(hall).length !== 0) {
+			hallOfFame.innerHTML = "";
+			for (let i=0; i< hall.highScore.length; i++) {
+				hallOfFame.innerHTML += `<div style="background: gray">[${i+1}] ${hall.highScore[i].player} | ${hall.highScore[i].score}</div>`;
+			}
+		}
+      }
+    });
+
+	//qundo un nuovo Game List viene ricevuto
+    glRef.onSnapshot(function(doc) {
+      //console.log("gl changes detected!");
+      if(doc && doc.exists) {
+        gl = doc.data();
+        //console.log("GL received: "+JSON.stringify(gl));
+		processGL(); //prcessa il contenuto ricevuto
+      }
+    });
+  }
+  getRealTimeUpdates();
+
+  function aggiornaGL() {
+  	glRef.set(gl, { merge: true }).then(function() {
+  		//console.log("Saved to gl!");
+  	}).catch(function(error) {
+  		//console.log("Error: ", error);
+  	});
+  }  
+
+  function aggiornaHoF() {
+  	hallRef.set(hall, { merge: true }).then(function() {
+  		console.log("Saved to HoF!");
+  	}).catch(function(error) {
+  		//console.log("Error: ", error);
+  	});
+  }  
+  
+  //richiamata quando un nuovo gl viene ricevuto
+  //aggiorna i dati del torneo e i dati del gioco
+  function processGL() {
+	//let waiting = "";
+	//let running = "";
+	waiting.innerHTML = "";
+	running.innerHTML = "";
+	if(gl[myGame] && myName) 
+		if(gl[myGame].pl1 == myName) myRole = "player1"; 
+		else myRole = "player2"; 
+	
+  	//console.log("updating Lista Giochi: "+JSON.stringify(gl));
+  	for(const game in gl) {
+		//console.log("gioco: "+game);
+		var nuovo = document.createElement('div');
+		nuovo.setAttribute('id', game);
+		if(gl[game].stato == "waiting") { // gioco in attesa di giocatore
+			nuovo.setAttribute('class', 'waiting');
+			//console.log("aggiungo gioco in attesa");
+			//console.log("pl1: "+gl[game].pl1+" myName: "+myName);
+//			if(gl[game].pl1 == myName)  //sono il creatore del gioco e posso rimuoverlo
+//				//nuovo.innerHTML += '<button onclick="rimuovi(this)" style="display:inline-block"/>X</button> '+game+": 1. "+gl[game].pl1+' 2. ';
+//				nuovo.innerHTML += 'game+": 1. "+gl[game].pl1+' 2. ';
+//			else 
+			if(myName == "" || myName === undefined)
+				nuovo.innerHTML += game+": 1. "+gl[game].pl1+' 2. <button onclick="join(this)" style="display:inline-block"/>Join</button>';
+			else
+				nuovo.innerHTML += game+": 1. "+gl[game].pl1+' 2. ...';
+				
+			if(myName && (gl[game].pl1 == myName || gl[game].pl2 == myName)) {
+				nuovo.setAttribute("style", "background: red");
+				waiting.prepend(nuovo);
+			} else
+				waiting.appendChild(nuovo);
+	
+		} else if(gl[game].stato == "running") { // gioco in corso
+			updateTavolo();
+			nuovo.setAttribute('class', 'running');
+			nuovo.innerHTML = game+" [ "+gl[game].pl1+": "+gl[game].scorePl1+" | "+gl[game].pl2+": "+ gl[game].scorePl2+" ]";
+			if(gl[game].pl1 == myName || gl[game].pl2 == myName) {
+				nuovo.setAttribute("style", "background: red");
+				running.prepend(nuovo);
+			} else
+				running.appendChild(nuovo);
+		} else { //il gioco è finito
+		  console.log("FORSE the game ended???");
+		  if(gl[myGame].stato == "ended") {
+
+		   console.log("the game ended");
+		   let winner;
+		   if(gl[myGame].scorePl1 > gl[myGame].scorePl2) winner = "player1";
+		   else if(gl[myGame].scorePl2 > gl[myGame].scorePl1) winner = "player2";
+		   else winner = "tie";
+		   if(myRole == winner || winner == "tie") {
+			console.log("I WIN");
+		  	animatedText("You WIN!!!", () => {
+				//glRef.update({ //rimuovi il gioco 
+				//	[myGame]: firebase.firestore.FieldValue.delete()
+				//});
+				//mi aggiungo nel Hall of Fame
+				if(hall[myName]) console.log("fai già parte della hallOfFame");
+				else hall[myName] = {score: 0, games: ""};
+				hall[myName].score++; 
+				//create high score array
+				let highScore = [];
+				for (const player in hall){
+					if(player != "highScore")
+						highScore.push({player: player, score: hall[player].score});
+				}
+				highScore.sort((a, b) => (a.score > b.score) ? -1 : 1); //in ordine decrescente
+				console.log(highScore);
+				hall.highScore = highScore;
+				//hall[myName].games += myGame+" ["+gl[myGame].pl1+": "+gl[myGame].scorePl1+" | "+gl[myGame].Pl2+": "+gl[myGame].scorePl2+"], "; 
+		  		aggiornaHoF();
+				animatedText("You WIN!!!", () => { 
+					//testo.style.display = "none"; 
+					logout();
+				});
+			});
+		   } else {
+		    animatedText("You Loose!!!", () => {});
+			console.log("I loose");
+			logout();
+		   }
+		   
+		  }
+		}
+  	}
+	waiting.innerHTML = "in attesa di giocatori:" + waiting.innerHTML;
+	running.innerHTML = "in gioco:" + running.innerHTML;
+	
+	//------------------------ UPDATE TAVOLO DEL MIO GIOCO ----------------------------------
+	//nel caso facessi parte di una partita attiva
+  
+  function updateTavolo(){
+  	  for(let i = 0; i < 20; i++) {
+		if(gl[myGame].tavolo[i].st == "back" && tavoloArray[i].st == "back") // carta girata
+			tavoloArray[i].pos = gl[myGame].tavolo[i].pos; //mi assicuro che la posizione coincida
+		else if(gl[myGame].tavolo[i].st != tavoloArray[i].st) { //nel caso differiscano aggiorna
+			if(gl[myGame].tavolo[i].st == "void")
+				rimuoviCarta(i);
+			else if(gl[myGame].tavolo[i].st == "front")
+				scopriCarta(gl[myGame].tavolo[i].pos, i);
+			else
+				{copriCarta(i); console.log("copri: "+i);}
+			tavoloArray[i].st = gl[myGame].tavolo[i].st; //tavoli sono stati sicronizzati
+		}
+	  }
+	}
+  }
+//----------------------------------------- GAME CODE ------------------------------------------------
   // carte
   // la sequenza di carte che verranno posizionate sul tavolo da gioco 
   const carteArray = [
@@ -120,12 +533,48 @@ document.addEventListener('DOMContentLoaded', () => {
   ]
 
 
-// tavolo di gioco
-const tavolo = document.querySelector('.tavolo');
-// posiziona le carte sul tavolo di gioco
+const container = document.querySelector('#container');
+var carte = [];
+// tavolo da gioco
+const tavolo = document.querySelector('#tavolo');
+const tavoloArray = [];
+
+//inizializza array tavolo con tutte le carte coperte
+for(let i = 0; i < 20; i++){
+	tavoloArray.push({pos: i, st: "back"});
+}
+	
+var nCarteOnTable = 20; //ci sono 20 carte sul tavolo inizialmente
+
+
+/**
+ * Returns a random number between min (inclusive) and max (exclusive)
+ */
+function getRandom(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
+//mischia le carte
+function mischiaCarte() {
+	// l'array dell'ordine originale
+	let originalOrder = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19];
+	// array che conterrà la posizione delle carte mischiate
+	let scrambledOrder = [];
+	//vado a togliere le carte dall'array ordinato in modo casuale e le inserisco nell'array mischiato
+	for(let nCarte = 20; nCarte > 0; nCarte--) {
+		var cartaX = getRandom(0, nCarte); //numero tra 0 e il n. di carte rimanenti nell'array ordinato
+		scrambledOrder.push( //inserisco la carta nell'array mischiato
+			{ pos: originalOrder.splice(cartaX, 1)[0], st: 'back' } //la carta che ho rimosso dall'array ordinato
+		);
+	}
+	//console.log(scrambledOrder);
+	return scrambledOrder;
+}
+	
+// posiziona le carte sul tavolo da gioco
 function memory() {
-  // distribuiamo le carte sul tavolo di gioco
-  for(let posizioneN = 0; posizioneN < carteArray.length; posizioneN++) {
+  // distribuiamo le carte sul tavolo da gioco
+  for(let i = 0; i < carteArray.length; i++) {
     // creo un posto sul tavolo per una carta
     var carta = document.createElement('img');
     // inizialmente la carta e' girata e quindi non mostra la figura
@@ -136,70 +585,160 @@ function memory() {
     carta.setAttribute('height', 100);
     // ogni posto sul tavolo viene identificato con un numero
     // il numero viene aggiunto all'elemento IMG sotto forma di attributo
-    carta.setAttribute('carta-numero', posizioneN);
+    carta.setAttribute('carta-numero', i);
+    //carta.setAttribute('carta-posizione', i);
     // aggiungo alla carta la possibilita' di poter essere scoperta/girata
     // cliccando sulla carta eseguiro' una funzione che la scopre
-    carta.addEventListener('click', scopriCarta);
+    carta.addEventListener('click', sendScopriCarta);
     // finalmente posiziono la carta sul tavolo
     tavolo.appendChild(carta);
   }
+  carte = document.querySelectorAll('img');
+
 }
 
 // scopri la carta
 var carteScelte  = []; // il nome delle carte scelte
 var carteScelteN = []; // il numero che identifica la posizione (posizioneN) della carta sul tavolo di gioco
 
-// richiamata quando una carta viene cliccata, mostra la figura che mostrerebbe la carta una volta girata
-function scopriCarta() {
-  // la parola chiave "this"/questa si riferisce alla carta (elemento HTML) che ha richiamato la funzione
-  // leggendo l'attributo possiamo sapere la posizioneN della carta scelta(cliccata) sul tavolo di gioco
-  var cartaN = this.getAttribute('carta-numero');
-  // I fini di seguire il funzionamento del programma e verificarne la correttezza
-  // uso la console per scrivere delle informazioni che aiutano durante lo sviluppo
-  console.log('scopri carta: '+ cartaN);
+function sendScopriCarta() {
+  if(gl[myGame].turno != myRole) {alert("non è il tuo turno"); return}
+  let cartaN = this.getAttribute('carta-numero');
+  if(carteScelte.length == 1 && cartaN == carteScelteN[0]) return; //user double cliccked the same card
+
+  //console.log("carte scelte: "+carteScelte);
+  //let posizioneN = this.getAttribute('carta-posizione'); //la posizione della carta sul tavolo
+  let posizioneN = gl[myGame].tavolo[cartaN].pos;
   // memorizzo in un Array "carteScelte" il nome della carta scelta
   // notate che alla posizione della carta sul tavolo corrisponde la carta nell'Array di carteArray
-  carteScelte.push(carteArray[cartaN].name);
+  carteScelte.push(carteArray[posizioneN].name);
   // memorizzo in un Array "carteScelteN" la posizioneN della carta scelta sul tavolo di gioco
-  carteScelteN.push(cartaN);
+  carteScelteN.push(cartaN);  //gl[myGame].tavolo[cartaN].pos = posizioneN; //aggiorno gl
+  //console.log("carte scelte: "+carteScelte);
+  //console.log("carte pos: "+carteScelteN);
+
+  gl[myGame].tavolo[cartaN].st = "front"; //aggiorno gl
+
+  //console.log("carteScelte.length = "+carteScelte.length);
+  if(carteScelte.length == 2) { //ho scelto 2 carte e verifico se conicidono o meno
+    //console.log("carteScelte: "+carteScelte[0]+", "+carteScelte[1]);
+	if(carteScelte[0] != carteScelte[1]) { // le carte scelte NON coincidono
+  		//console.log("turning around: "+ gl[myGame].turno);
+		if(gl[myGame].turno == "player1") gl[myGame].turno = "player2";
+		else gl[myGame].turno = "player1";
+		//console.log("turno di: "+ gl[myGame].turno);
+		gl[myGame].leCarte = "nonCoincidono";
+	} else {//le carte coincidono incremento il mio punteggio
+		if(myRole == "player1") gl[myGame].scorePl1++;
+		else gl[myGame].scorePl2++;
+		//console.log("carte indovinate - turno: role = "+ myRole)
+		gl[myGame].leCarte = "coincidono";
+
+	}
+  }
+  aggiornaGL();
+}
+// richiamata quando una carta viene cliccata, mostra la figura che mostrerebbe la carta una volta girata
+function scopriCarta(posizioneN, cartaN) {
+  // I fini di seguire il funzionamento del programma e verificarne la correttezza
+  // uso la console per scrivere delle informazioni che aiutano durante lo sviluppo
+  //console.log('scopri carta: '+ cartaN);
+  //console.log("posizioneN: "+posizioneN+" cartaScelta: "+carteScelteN[0]);
+
   // cambiamo l'immagine associata all'elemento prescelto
   // con l'immagine che avevamo memorizzato nell'ARRAY "carteArray"
   // questa operazione inizia una sequeza di operazioni da parte del Browser per sostituire
   // l'immagine dell'elemento IMG, questa operazione puo' richiedere un po' di tempo
-  this.setAttribute('src', carteArray[cartaN].img);
+  carte[cartaN].setAttribute('src', carteArray[posizioneN].img);
   // se il numero di carte scelte e' 2, richiamo la funzione "controllaCarte", ma lo faccio
   // dopo un certo intervallo di tempo (100ms) per dare tempo al Browser di completare
   // la sostituzione dell'immagine dell'ultima carta scoperta.
   // Questo e' necessario perche' Javascript e' un linguaggio asyncrono, e mentre il browser avvia la sequenza
   // per la sostituzione dell'immagine, il resto del codice viene eseguito in contemporanea
-  if(carteScelte.length === 2) setTimeout(controllaCarte, 333);
+  if(carteScelte.length === 2) setTimeout(stampaMessaggio, 333);
 }
 
-function controllaCarte() {
-  carte = document.querySelectorAll('img');
-  if(carteScelte[0] === carteScelte[1]) { // le carte scelte coincidono
+function stampaMessaggio() {
+  if(gl[myGame].leCarte == "coincidono") { // le carte scelte coincidono
 	// devo rimuovere le carte dal tavolo di gioco
-	alert('Bravo +1');
-	// sostituisco l'immagine della carta con una vuota (stesso colore dello sfondo)
-	carte[carteScelteN[0]].setAttribute('src', 'images/vuota.png');
-	// rimuovo la chiamata alla funzione "scopriCarta" per la carta
-	carte[carteScelteN[0]].removeEventListener('click', scopriCarta);
-	// ripeto per la seconda carta
-	carte[carteScelteN[1]].setAttribute('src', 'images/vuota.png');
-	carte[carteScelteN[1]].removeEventListener('click', scopriCarta);
+	  gl[myGame].nCarteOnTable -= 2; //2 carte in meno sul tavolo da gioco
+	  if(gl[myGame].nCarteOnTable == 18) {  //partita finita
+		  animatedText("GAME OVER", () => {
+			gl[myGame].stato = "ended";
+			aggiornaGL();
+			// in entrambi i casi svuoto l'array delle carte scelte per il nuovo turno di gioco
+			carteScelte  = [];
+			carteScelteN = [];
+		  });
+	  } else animatedText("Yess!", () => {  //yess hai indovinato!
+		gl[myGame].tavolo[carteScelteN[0]].st = "void";
+		gl[myGame].tavolo[carteScelteN[1]].st = "void";
+
+		aggiornaGL();
+		// in entrambi i casi svuoto l'array delle carte scelte per il nuovo turno di gioco
+ 		carteScelte  = [];
+  		carteScelteN = [];
+	  });
+
   } else { // le carte scelte non coincidono
-	alert("Booo! Prova di nuovo sarai piu' fortunato");
-	// sostituisco l'immagine della carta con l'immagine della carte girata
-	carte[carteScelteN[0]].setAttribute('src', 'images/blank.png');
-	carte[carteScelteN[1]].setAttribute('src', 'images/blank.png');
+	//alert("Booo! Prova di nuovo sarai piu' fortunato");
+	  animatedText("Nooooo", () => {
+		// sostituisco l'immagine della carta con l'immagine della carte girata
+		gl[myGame].tavolo[carteScelteN[0]].st = "back";
+		gl[myGame].tavolo[carteScelteN[1]].st = "back";
+		aggiornaGL();
+		
+		//console.log(carteScelte);
+		//console.log(carteScelteN);
+		// in entrambi i casi svuoto l'array delle carte scelte per il nuovo turno di gioco
+ 		carteScelte  = [];
+  		carteScelteN = [];
+
+	  });
+
   }
-  // in entrambi i casi svuoto l'array delle carte scelte per il nuovo turno di gioco
-  carteScelte  = [];
-  carteScelteN = [];
 
 }
 
-memory();
+function copriCarta(n) {
+	// sostituisco l'immagine della carta con l'immagine della carte girata
+	carte[n].setAttribute('src', 'images/blank.png');
+}
+
+function rimuoviCarta(n) {
+	// sostituisco l'immagine della carta con l'immagine della carte girata
+	carte[n].setAttribute('src', 'images/vuota.png');
+	// rimuovo la chiamata alla funzione "scopriCarta" per la carta
+	carte[n].removeEventListener('click', sendScopriCarta);
+}
+
+var testo = document.querySelector('.centered');
+
+function animatedText(msg, callback) {
+	
+	testo.innerHTML = msg;
+	testo.style.fontSize = "xx-small";
+	testo.style.display = "block";
+	
+	increaseText(10, callback);
+ 
+}
+
+function increaseText(n, callback) {
+  
+  if(n == 410) {testo.style.display = "none"; callback(); return;}
+	
+  setTimeout(() => {
+	testo.style.fontSize = `${n}px`;
+	increaseText(n + 4, callback);
+  }, 10);
+	     
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+
+  memory();
+
 });
   </script>
 </body>
