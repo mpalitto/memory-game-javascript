@@ -155,7 +155,9 @@
   var hall = {};  //list giocatori vincenti
   var myGame = localStorage.myGame;
   var myRole = localStorage.myRole;
-  var myName = localStorage.myName;
+  var myName = "";
+  
+  if(localStorage.myName !== undefined) myName = localStorage.myName;
   
   window.onbeforeunload = function(){
 	localStorage.myGame = myGame;
