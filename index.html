@@ -65,22 +65,46 @@
   font-size: 2vw;
 }
 .lista {
+  border-radius: 5px;
   background: orange;
   padding: 2px;
   margin: 4px;
   color: white;
 }
 .waiting {
+  border-radius: 5px;
   background: green;
   padding: 2px;
   margin: 4px;
   color: white;
 }
 .running {
+  border-radius: 5px;
   background: blue;
   padding: 2px;
   margin: 4px;
   color: white;
+}
+.highScore {
+  border-radius: 5px;
+  background: gray;
+  padding: 2px;
+  margin: 4px;
+  color: white;
+}
+.blink-bg{
+	color: #fff;
+	padding: 10px;
+	display: inline-block;
+	border-radius: 5px;
+	animation: blinkingBackground 2s infinite;
+}
+@keyframes blinkingBackground{
+	0%		{ background-color: #10c018;}
+	25%		{ background-color: #1056c0;}
+	50%		{ background-color: #ef0a1a;}
+	75%		{ background-color: #254878;}
+	100%	{ background-color: #04a1d5;}
 }
   </style>
 
@@ -99,7 +123,7 @@
   <div id="innerGrid">
     <div id="gioco">
         <div id="tavolo"></div>
-        <div id="animatedMessage" class="centered">PLAY</div>
+        <div id="animatedMessage" class="centered" style="dispay:none"></div>
     </div> 
     <div id="torneo">
         <div id="gameList">Lista dei giochi
@@ -264,6 +288,7 @@
 
 	aggiornaGL();
 	login();
+	animatedText("PLAY", ()=>{});
   }
 
 //----------------------------------------------------------
@@ -302,9 +327,9 @@
         hall = doc.data();
         //console.log("new msg: "+JSON.stringify(myData));
 		if(Object.entries(hall).length !== 0) {
-			hallOfFame.innerHTML = "";
+			hallOfFame.innerHTML = "Classifica:";
 			for (let i=0; i< hall.highScore.length; i++) {
-				hallOfFame.innerHTML += `<div style="background: gray">[${i+1}] ${hall.highScore[i].player} | ${hall.highScore[i].score}</div>`;
+				hallOfFame.innerHTML += `<div class="highScore">[${i+1}] ${hall.highScore[i].player} | ${hall.highScore[i].score}</div>`;
 			}
 		}
       }
@@ -362,37 +387,48 @@
 //				//nuovo.innerHTML += '<button onclick="rimuovi(this)" style="display:inline-block"/>X</button> '+game+": 1. "+gl[game].pl1+' 2. ';
 //				nuovo.innerHTML += 'game+": 1. "+gl[game].pl1+' 2. ';
 //			else 
-			if(myName == "" || myName === undefined)
+			if(myName == "" || myName === undefined) //se non sono ancora un giocatore
+				//dammi la possibilità di inserirmi in un gioco in attesa mostrando il tasto JOIN
 				nuovo.innerHTML += game+": 1. "+gl[game].pl1+' 2. <button onclick="join(this)" style="display:inline-block"/>Join</button>';
-			else
+			else if(myName && gl[game].pl1 == myName) //se sono il giocoatore che ha creato il gioco
+				nuovo.innerHTML += game+': 1. <span id="io" class="blink-bg">'+gl[game].pl1+'</span> 2. ...';//metti in evidenza il mio nome
+			else //sono un giocatore ma di un altra partita
 				nuovo.innerHTML += game+": 1. "+gl[game].pl1+' 2. ...';
-				
-			if(myName && (gl[game].pl1 == myName || gl[game].pl2 == myName)) {
-				nuovo.setAttribute("style", "background: red");
-				waiting.prepend(nuovo);
-			} else
-				waiting.appendChild(nuovo);
+			
+			//inserisci la nuova partita nella lista dei giochi in attesa	
+			if(myName && (gl[game].pl1 == myName || gl[game].pl2 == myName)) { //se sono uno dei giocatori
+				nuovo.setAttribute("style", "background: red"); //evidenzia il gioco in rosso
+				waiting.prepend(nuovo); //e inseriscilo in cima alla lista
+			} else //se non sono uno dei giocatori
+				waiting.appendChild(nuovo); //inseriscilo alla fine della lista
 	
 		} else if(gl[game].stato == "running") { // gioco in corso
 			updateTavolo();
 			nuovo.setAttribute('class', 'running');
-			nuovo.innerHTML = game+" [ "+gl[game].pl1+": "+gl[game].scorePl1+" | "+gl[game].pl2+": "+ gl[game].scorePl2+" ]";
-			if(gl[game].pl1 == myName || gl[game].pl2 == myName) {
+			if(gl[game].pl1 == myName || gl[game].pl2 == myName)  //se è il mio gioco
+				if(gl[game].turno == "player1") //ed è il turno del giocatore1
+					nuovo.innerHTML = game+' [ <span class="blink-bg">'+gl[game].pl1+"</span>: "+gl[game].scorePl1+" | "+gl[game].pl2+": "+ gl[game].scorePl2+" ]";
+				else //è il turno del giocatore2
+					nuovo.innerHTML = game+" [ "+gl[game].pl1+": "+gl[game].scorePl1+' | <span class="blink-bg">'+gl[game].pl2+"</span>: "+ gl[game].scorePl2+" ]";
+			else //non è il mio gioco
+				nuovo.innerHTML = game+" [ "+gl[game].pl1+": "+gl[game].scorePl1+" | "+gl[game].pl2+": "+ gl[game].scorePl2+" ]";
+			
+			if(gl[game].pl1 == myName || gl[game].pl2 == myName) { //se è il mio gioco
 				nuovo.setAttribute("style", "background: red");
 				running.prepend(nuovo);
 			} else
 				running.appendChild(nuovo);
 		} else { //il gioco è finito
-		  console.log("FORSE the game ended???");
+		  //console.log("FORSE the game ended???");
 		  if(gl[myGame].stato == "ended") {
 
-		   console.log("the game ended");
+		   //console.log("the game ended");
 		   let winner;
 		   if(gl[myGame].scorePl1 > gl[myGame].scorePl2) winner = "player1";
 		   else if(gl[myGame].scorePl2 > gl[myGame].scorePl1) winner = "player2";
 		   else winner = "tie";
 		   if(myRole == winner || winner == "tie") {
-			console.log("I WIN");
+			//console.log("I WIN");
 		  	animatedText("You WIN!!!", () => {
 				//glRef.update({ //rimuovi il gioco 
 				//	[myGame]: firebase.firestore.FieldValue.delete()
@@ -408,7 +444,7 @@
 						highScore.push({player: player, score: hall[player].score});
 				}
 				highScore.sort((a, b) => (a.score > b.score) ? -1 : 1); //in ordine decrescente
-				console.log(highScore);
+				//console.log(highScore);
 				hall.highScore = highScore;
 				//hall[myName].games += myGame+" ["+gl[myGame].pl1+": "+gl[myGame].scorePl1+" | "+gl[myGame].Pl2+": "+gl[myGame].scorePl2+"], "; 
 		  		aggiornaHoF();
@@ -419,7 +455,7 @@
 			});
 		   } else {
 		    animatedText("You Loose!!!", () => {});
-			console.log("I loose");
+			//console.log("I loose");
 			logout();
 		   }
 		   
