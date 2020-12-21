@@ -700,7 +700,7 @@ function stampaMessaggio() {
   if(gl[myGame].leCarte == "coincidono") { // le carte scelte coincidono
 	// devo rimuovere le carte dal tavolo di gioco
 	  gl[myGame].nCarteOnTable -= 2; //2 carte in meno sul tavolo da gioco
-	  if(gl[myGame].nCarteOnTable == 18) {  //partita finita
+	  if(gl[myGame].nCarteOnTable == 0) {  //partita finita
 		  animatedText("GAME OVER", () => {
 			gl[myGame].stato = "ended";
 			aggiornaGL();
